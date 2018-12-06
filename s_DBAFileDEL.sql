@@ -1,0 +1,74 @@
+USE DBADefault;
+SET ANSI_PADDING ON;SET ANSI_WARNINGS ON;SET ANSI_NULLS ON
+GO
+CREATE PROCEDURE dbo.s_DBAFileDEL
+@FileId			int
+AS
+DECLARE	@Error			int,
+		@ErrMsg			nvarchar(2048)
+		
+
+IF NOT EXISTS(
+	SELECT	1
+	FROM	DBAFile
+	WHERE	FileId = @FileId)
+BEGIN;
+	SET @ErrMsg = N'FileId ' + CONVERT(nvarchar(10), @FileId) + N' does not exist.'
+END;
+
+IF @ErrMsg IS NULL
+BEGIN;
+	BEGIN TRY
+		DELETE	dbo.DBAFileNote
+		WHERE	FileId = @FileId
+	END TRY
+	BEGIN CATCH
+		SELECT @ErrMsg = OBJECT_NAME(@@PROCID) + N' DBAFileNote - Delete: ' + ERROR_MESSAGE();
+	END CATCH
+END;
+
+IF @ErrMsg IS NULL
+BEGIN;
+	BEGIN TRY
+		DELETE	dbo.DBAFileColumn
+		WHERE	FileRowId IN
+					(SELECT	FileRowId
+					FROM	dbo.DBAFileRow
+					WHERE	FileId = @FileId);
+	END TRY
+	BEGIN CATCH
+		SELECT @ErrMsg = OBJECT_NAME(@@PROCID) + N' DBAFileColumn - Delete: ' + ERROR_MESSAGE();
+	END CATCH
+END;
+
+IF @ErrMsg IS NULL
+BEGIN;
+	BEGIN TRY
+		DELETE	dbo.DBAFileRow
+		WHERE	FileId = @FileId;
+	END TRY
+	BEGIN CATCH
+		SELECT @ErrMsg = OBJECT_NAME(@@PROCID) + N' DBAFileRow - Delete: ' + ERROR_MESSAGE();
+	END CATCH
+END;
+
+IF @ErrMsg IS NULL
+BEGIN;
+	BEGIN TRY
+		DELETE	dbo.DBAFile
+		WHERE	FileId = @FileId;
+	END TRY
+	BEGIN CATCH
+		SELECT @ErrMsg = OBJECT_NAME(@@PROCID) + N' DBAFile - Delete: ' + ERROR_MESSAGE();
+	END CATCH
+END;
+
+IF @ErrMsg IS NULL
+	RETURN(0)
+ELSE
+BEGIN;
+	RAISERROR(@ErrMsg, 18, 1)
+	RETURN(-1);
+END;
+GO
+

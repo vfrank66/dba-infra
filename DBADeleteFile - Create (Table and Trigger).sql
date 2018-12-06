@@ -1,0 +1,36 @@
+SET NOCOUNT ON;SET ROWCOUNT 0;SET QUOTED_IDENTIFIER ON;SET CONCAT_NULL_YIELDS_NULL ON;
+SET ANSI_WARNINGS ON;SET ANSI_PADDING ON;SET ANSI_NULLS ON;
+SET XACT_ABORT ON;SET ARITHABORT ON;
+GO
+USE DBADefault;
+GO
+
+CREATE TABLE dbo.DBAFile_Cleanup
+	(RowSeq					int				NOT NULL IDENTITY(1, 1),
+	FileId					int				NOT NULL
+	PRIMARY KEY CLUSTERED
+		(RowSeq),
+	UNIQUE NONCLUSTERED
+		(FileId)
+		WITH FILLFACTOR = 100);
+GO
+
+-- When an entry is added to the table, start the deletion job.
+CREATE TRIGGER TR_DBAFile_Cleanup_AfterInsert
+ON dbo.DBAFile_Cleanup
+AFTER INSERT
+AS
+
+BEGIN;
+	BEGIN TRY
+		EXEC msdb.dbo.sp_start_job @job_name = N'DBA - DBAFile Cleanup';
+	END TRY
+	BEGIN CATCH
+		PRINT N'TR_DBAFile_Cleanup_AfterInsert: ' + ERROR_MESSAGE();
+	END CATCH
+END;
+
+
+
+
+
